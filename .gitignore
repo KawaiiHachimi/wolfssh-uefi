@@ -1,6 +1,7 @@
 .build/
 WolfSshPkg/ThirdParty/
 *.log
+!validation/*.log
 __pycache__/
 *.pyc
 .venv/
