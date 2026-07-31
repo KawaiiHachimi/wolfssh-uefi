@@ -1,0 +1,6 @@
+.build/
+WolfSshPkg/ThirdParty/
+*.log
+__pycache__/
+*.pyc
+.venv/

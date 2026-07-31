@@ -1,0 +1,43 @@
+[Defines]
+  INF_VERSION                    = 0x00010006
+  BASE_NAME                      = WolfSsh
+  FILE_GUID                      = 3847BAF3-3E4F-41EB-86BD-BC4697933464
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 0.1
+  ENTRY_POINT                    = UefiMain
+
+[Sources]
+  Arguments.c
+  Auth.c
+  Main.c
+  Tcp4.c
+  Terminal.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  NetworkPkg/NetworkPkg.dec
+  ShellPkg/ShellPkg.dec
+  WolfSshPkg/WolfSshPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  NetLib
+  PrintLib
+  TimerLib
+  UefiApplicationEntryPoint
+  UefiBootServicesTableLib
+  UefiLib
+  UefiCompatLib
+  WolfCryptLib
+  WolfSshLib
+
+[Protocols]
+  gEfiShellParametersProtocolGuid
+  gEfiTcp4ServiceBindingProtocolGuid
+  gEfiTcp4ProtocolGuid
+
+[BuildOptions]
+  GCC:*_*_*_CC_FLAGS = -DWOLFSSL_USER_SETTINGS

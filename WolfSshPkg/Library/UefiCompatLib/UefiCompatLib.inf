@@ -1,0 +1,24 @@
+[Defines]
+  INF_VERSION                    = 0x00010006
+  BASE_NAME                      = UefiCompatLib
+  FILE_GUID                      = E2ED5AB6-D375-4BF6-A66A-52056B92836D
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 0.1
+  LIBRARY_CLASS                  = UefiCompatLib|UEFI_APPLICATION
+
+[Sources]
+  UefiCompat.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  WolfSshPkg/WolfSshPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  UefiBootServicesTableLib
+  UefiLib
+
+[Protocols]
+  gEfiRngProtocolGuid

@@ -1,0 +1,60 @@
+diff --git a/src/internal.c b/src/internal.c
+index 0fe3ad9..5d0d486 100644
+--- a/src/internal.c
++++ b/src/internal.c
+@@ -19651,7 +19651,8 @@ int SendChannelRequest(WOLFSSH* ssh, byte* name, word32 nameSz)
+ }
+ 
+ 
+-#if defined(WOLFSSH_TERM) && !defined(NO_FILESYSTEM)
++#if defined(WOLFSSH_TERM) && \
++    (!defined(NO_FILESYSTEM) || defined(WOLFSSH_UEFI))
+ 
+ /* out is always a TERMINAL_MODES_MAX_SZ buffer, and one byte is held back
+  * for the terminator CreateMode() appends */
+@@ -19928,7 +19929,11 @@ static void GetTerminalInfo(word32* width, word32* height,
+     *pixHeight = 0;
+     *term = NULL;
+ 
+-#ifdef HAVE_SYS_IOCTL_H
++#if defined(WOLFSSH_UEFI)
++    extern void wolfSSH_UEFI_GetTerminalInfo(word32*, word32*, word32*,
++            word32*, const char**);
++    wolfSSH_UEFI_GetTerminalInfo(width, height, pixWidth, pixHeight, term);
++#elif defined(HAVE_SYS_IOCTL_H)
+     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &windowSize) == 0 &&
+             windowSize.ws_col != 0 && windowSize.ws_row != 0) {
+         *width  = (word32)windowSize.ws_col;
+@@ -20055,7 +20060,7 @@ int SendChannelTerminalRequest(WOLFSSH* ssh)
+     WLOG(WS_LOG_DEBUG, "Leaving SendChannelTerminalRequest(), ret = %d", ret);
+     return ret;
+ }
+-#endif /* WOLFSSH_TERM */
++#endif /* WOLFSSH_TERM && (!NO_FILESYSTEM || WOLFSSH_UEFI) */
+ 
+ 
+ #ifdef WOLFSSH_AGENT
+diff --git a/src/ssh.c b/src/ssh.c
+index fa7bfb6..e25f1a5 100644
+--- a/src/ssh.c
++++ b/src/ssh.c
+@@ -1056,7 +1056,8 @@ int wolfSSH_connect(WOLFSSH* ssh)
+             FALL_THROUGH;
+ 
+         case CONNECT_CLIENT_CHANNEL_AGENT_REQUEST_SENT:
+-        #if defined(WOLFSSH_TERM) && !defined(NO_FILESYSTEM)
++        #if defined(WOLFSSH_TERM) && \
++            (!defined(NO_FILESYSTEM) || defined(WOLFSSH_UEFI))
+             if (ssh->sendTerminalRequest) {
+                 if ( (ssh->error = SendChannelTerminalRequest(ssh))
+                         < WS_SUCCESS) {
+@@ -1573,7 +1574,8 @@ void* wolfSSH_GetPublicKeyCheckCtx(WOLFSSH* ssh)
+ }
+ 
+ 
+-#if defined(WOLFSSH_TERM) && !defined(NO_FILESYSTEM)
++#if defined(WOLFSSH_TERM) && \
++    (!defined(NO_FILESYSTEM) || defined(WOLFSSH_UEFI))
+ /* Used to resize terminal window with shell connections
+  * returns WS_SUCCESS on success */
+ int wolfSSH_ChangeTerminalSize(WOLFSSH* ssh, word32 columns, word32 rows,

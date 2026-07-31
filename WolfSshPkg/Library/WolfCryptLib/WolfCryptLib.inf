@@ -1,0 +1,39 @@
+[Defines]
+  INF_VERSION                    = 0x00010006
+  BASE_NAME                      = WolfCryptLib
+  FILE_GUID                      = 7CDBA3C1-0D19-46FB-A389-DB5534BBD9AF
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 0.1
+  LIBRARY_CLASS                  = WolfCryptLib|UEFI_APPLICATION
+
+[Sources]
+  ../../ThirdParty/wolfssl/wolfcrypt/src/aes.c
+  ../../ThirdParty/wolfssl/wolfcrypt/src/asn.c
+  ../../ThirdParty/wolfssl/wolfcrypt/src/coding.c
+  ../../ThirdParty/wolfssl/wolfcrypt/src/ecc.c
+  ../../ThirdParty/wolfssl/wolfcrypt/src/hash.c
+  ../../ThirdParty/wolfssl/wolfcrypt/src/hmac.c
+  ../../ThirdParty/wolfssl/wolfcrypt/src/kdf.c
+  ../../ThirdParty/wolfssl/wolfcrypt/src/logging.c
+  ../../ThirdParty/wolfssl/wolfcrypt/src/memory.c
+  ../../ThirdParty/wolfssl/wolfcrypt/src/random.c
+  ../../ThirdParty/wolfssl/wolfcrypt/src/sha256.c
+  ../../ThirdParty/wolfssl/wolfcrypt/src/signature.c
+  ../../ThirdParty/wolfssl/wolfcrypt/src/sp_c64.c
+  ../../ThirdParty/wolfssl/wolfcrypt/src/sp_int.c
+  ../../ThirdParty/wolfssl/wolfcrypt/src/wc_encrypt.c
+  ../../ThirdParty/wolfssl/wolfcrypt/src/wc_port.c
+  ../../ThirdParty/wolfssl/wolfcrypt/src/wolfmath.c
+  LinkMarker.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  WolfSshPkg/WolfSshPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  UefiCompatLib
+
+[BuildOptions]
+  GCC:*_*_*_CC_FLAGS = -DWOLFSSL_USER_SETTINGS -DBUILDING_WOLFSSL -Wno-error=unused-function -Wno-error=unused-variable -Wno-error=unused-parameter -Wno-error=unused-const-variable

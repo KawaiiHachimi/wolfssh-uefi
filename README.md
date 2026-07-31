@@ -131,10 +131,10 @@ fs0:\wolfssh.efi --self-test
 测试脚本会：
 
 1. 构建 RELEASE AARCH64 EFI 应用；
-2. 启动只允许目标算法、固定测试主机密钥和测试密码的 AsyncSSH 服务端；
+2. 生成一次性 ECDSA P-256 主机密钥，并启动只允许目标算法和测试密码的 AsyncSSH 服务端；
 3. 通过一个无特权 QEMU stream 后端提供 DHCP、ARP 和单连接 TCP 转发；
 4. 启动 AARCH64 QEMU/EDK II/UEFI Shell；
-5. 验证 `-f` 主机密钥固定、密码认证、PTY 尺寸、shell channel、颜色、擦除、光标定位和双向 DSR 回应；
+5. 验证 `-f` 精确固定当次临时主机密钥、密码认证、PTY 尺寸、shell channel、颜色、擦除、光标定位和双向 DSR 回应；
 6. 要求远端会话以状态 0 关闭。
 
 该网络代理仅用于可重复测试，不是通用用户态网络栈。真实固件运行时使用

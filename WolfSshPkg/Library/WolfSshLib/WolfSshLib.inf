@@ -1,0 +1,29 @@
+[Defines]
+  INF_VERSION                    = 0x00010006
+  BASE_NAME                      = WolfSshLib
+  FILE_GUID                      = C35A66EA-1267-48BB-9EBB-EAC13B44024E
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 0.1
+  LIBRARY_CLASS                  = WolfSshLib|UEFI_APPLICATION
+
+[Sources]
+  ../../ThirdParty/wolfssh/src/ssh.c
+  ../../ThirdParty/wolfssh/src/internal.c
+  ../../ThirdParty/wolfssh/src/log.c
+  ../../ThirdParty/wolfssh/src/io.c
+  ../../ThirdParty/wolfssh/src/port.c
+  ../../ThirdParty/wolfssh/src/ossh.c
+  LinkMarker.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  WolfSshPkg/WolfSshPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  UefiCompatLib
+  WolfCryptLib
+
+[BuildOptions]
+  GCC:*_*_*_CC_FLAGS = -DWOLFSSL_USER_SETTINGS -DBUILDING_WOLFSSH -Wno-error=unused-function -Wno-error=unused-variable -Wno-error=unused-parameter -Wno-error=unused-const-variable -Wno-error=implicit-fallthrough
