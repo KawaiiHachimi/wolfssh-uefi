@@ -1,52 +1,78 @@
 # wolfSSH UEFI Shell Client
 
-这是一个可运行的 AARCH64（ARM64）与 X64（x86-64）UEFI Shell SSH 客户端原型。
-它把 wolfSSH 客户端、wolfCrypt 和 EDK II 的原生 TCP4 协议直接链接进 EFI 应用，
-不依赖 POSIX、BSD socket 或 UEFI 之外的运行时。
+[中文](README_zh.md)
 
-两个架构都已经在 QEMU 中完成真实的 SSH 握手和双向 PTY 测试。它不只是执行一条
-远端命令：连接建立后会进入交互式终端，可运行 shell、编辑器和常见文本 TUI。
-终端兼容范围与已知限制见下文。
+This is a working UEFI Shell SSH client prototype for AARCH64 (ARM64) and X64
+(x86-64). It links the wolfSSH client, wolfCrypt, and EDK II's native TCP4
+protocol directly into an EFI application, with no POSIX, BSD sockets, or
+runtime beyond UEFI.
 
-## 项目来源与 AI 协作
+Both architectures have completed real SSH handshakes and bidirectional PTY
+tests in QEMU. Rather than executing only a remote command, the client enters
+an interactive terminal after connecting, suitable for shells, editors, and
+common text TUIs. See the terminal compatibility section for its scope and
+known limitations.
 
-本项目由仓库所有者提出目标、需求和验收方向，首版实现由 OpenAI ChatGPT
-（Codex）在协作过程中完成，包括方案设计、wolfSSH/wolfCrypt 移植、EDK II TCP4
-接入、终端模拟、构建脚本以及 QEMU 端到端验证。该说明不代表 OpenAI 对项目提供
-官方支持或安全背书；AI 生成的实现仍应接受代码审查、实体固件测试和安全审计。
+![wolfSSH UEFI Shell client](imgs/wolfssh-uefi.png)
 
-The initial implementation was designed, written, built, and validated end-to-end by
-ChatGPT (Codex), under the repository owner's direction.
+## Screenshots
 
-## 已实现
+After connecting from UEFI Shell, the client can run common command-line
+programs and interactive terminal applications.
 
-| 部分 | 实现 |
+### Fastfetch
+
+![Running fastfetch in a wolfSSH UEFI session](imgs/run-fastfetch.png)
+
+### Codex CLI
+
+![Running Codex CLI in a wolfSSH UEFI session](imgs/run-codex.png)
+
+### Kimi Code CLI
+
+![Running Kimi Code CLI in a wolfSSH UEFI session](imgs/run-kimi.png)
+
+## Origin and AI collaboration
+
+The repository owner set the goals, requirements, and acceptance criteria. The
+initial implementation was designed, written, built, and validated end-to-end
+by ChatGPT (Codex), including the design, wolfSSH/wolfCrypt port, EDK II TCP4
+integration, terminal emulator, build scripts, and QEMU end-to-end validation.
+This does not constitute official OpenAI support or a security endorsement;
+AI-generated code still requires review, physical-firmware testing, and a
+security audit.
+
+## Implemented
+
+| Area | Implementation |
 |---|---|
-| 架构 | AARCH64 与 X64；分别发布 `wolfssh-aarch64.efi` 和 `wolfssh-x64.efi` |
-| 网络 | 直接使用 `EFI_TCP4_SERVICE_BINDING_PROTOCOL` / `EFI_TCP4_PROTOCOL`；枚举网卡、检测媒体、异步接收、带超时发送与关闭 |
-| 地址配置 | 与 `iperf3-uefi` 的 TCP4 路径一致：`UseDefaultAddress=TRUE`，等待 `EFI_NO_MAPPING` 消失，使用固件已有的 DHCP 或静态 IPv4 映射 |
-| SSH | wolfSSH 客户端、密码认证、PTY 和交互式 shell channel |
-| 随机数 | 只接受 `EFI_RNG_PROTOCOL`；协议不可用时拒绝建立 SSH 会话 |
-| 主机密钥 | 显示 SHA-256 十六进制摘要；支持交互确认、`-f` 精确固定、`-y` 单次不安全接受 |
-| 输出终端 | UTF-8（BMP）、光标移动/定位、清屏/清行、滚动区域、插入/删除行和字符、保存光标、16 色及 256/RGB 到 16 色近似、主/备用屏幕、光标显隐 |
-| 双向终端 | DSR/设备状态回应，方向键、Home/End、Insert/Delete、PageUp/PageDown、F1–F10，应用光标模式 |
-| 本地退出 | `Ctrl+]` 返回 UEFI Shell |
+| Architectures | AARCH64 and X64, released as `wolfssh-aarch64.efi` and `wolfssh-x64.efi` |
+| Networking | Direct `EFI_TCP4_SERVICE_BINDING_PROTOCOL` / `EFI_TCP4_PROTOCOL` use; NIC enumeration, media detection, asynchronous receive, and timed send/close |
+| Addressing | Uses the same TCP4 approach as `iperf3-uefi`: `UseDefaultAddress=TRUE`, waits for `EFI_NO_MAPPING` to clear, and uses the firmware's existing DHCP or static IPv4 mapping |
+| SSH | wolfSSH client, password authentication, PTY, and interactive shell channel |
+| Randomness | Requires `EFI_RNG_PROTOCOL`; an SSH session is refused when it is unavailable |
+| Host keys | Shows a SHA-256 hexadecimal fingerprint; supports interactive confirmation, exact `-f` pinning, and one-time insecure `-y` acceptance |
+| Terminal output | UTF-8 (BMP), cursor motion/positioning, screen and line erase, scrolling regions, insert/delete lines and characters, saved cursor, 16-color and 256/RGB-to-16-color approximation, primary/alternate screens, and cursor visibility |
+| Bidirectional terminal | DSR/device-status replies; arrows, Home/End, Insert/Delete, PageUp/PageDown, F1–F10, and application cursor mode |
+| Local exit | `Ctrl+]` returns to UEFI Shell |
 
-当前加密互操作配置为：
+The current cryptographic interoperability configuration is:
 
-- KEX：`ecdh-sha2-nistp256`
-- 主机密钥：`ecdsa-sha2-nistp256`
-- 加密：AES-128/192/256 GCM 和 CTR
-- MAC：`hmac-sha2-256`（GCM 为 AEAD）
-- 用户认证：password
+- KEX: `ecdh-sha2-nistp256`
+- Host key: `ecdsa-sha2-nistp256`
+- Encryption: AES-128/192/256 GCM and CTR
+- MAC: `hmac-sha2-256` (AEAD for GCM)
+- User authentication: password
 
-这组算法可连接保留 ECDSA P-256 主机密钥的常规 OpenSSH 服务器；只允许
-Ed25519、RSA 或 Curve25519 的定制服务器目前无法协商。
+This set works with ordinary OpenSSH servers which retain an ECDSA P-256 host
+key. Custom servers offering only Ed25519, RSA, or Curve25519 cannot currently
+negotiate with the client.
 
-## 快速构建
+## Quick build
 
-在 x86-64 Linux 上，先拉取锁定版本的源码。`ARCH=ALL` 会准备 AARCH64 工具、
-两个架构的 UEFI Shell 和测试所需的 Python 包：
+On x86-64 Linux, first retrieve the pinned source revisions. `ARCH=ALL`
+prepares the AARCH64 toolchain, UEFI Shell for both architectures, and the
+Python package used for testing:
 
 ```bash
 ./scripts/fetch-deps.sh
@@ -56,17 +82,20 @@ ARCH=AARCH64 BUILD_TARGET=RELEASE ./scripts/build.sh
 ARCH=X64 BUILD_TARGET=RELEASE ./scripts/build.sh
 ```
 
-只构建 X64 时可把工具准备命令改成 `ARCH=X64 ./scripts/fetch-tools.sh`。输出文件为：
+For an X64-only build, use `ARCH=X64 ./scripts/fetch-tools.sh`. The output
+files are:
 
 ```text
 .build/output/wolfssh-aarch64.efi
 .build/output/wolfssh-x64.efi
 ```
 
-每次构建还会把刚生成的架构复制为 `.build/output/wolfssh.efi`，供已有自动化兼容使用；
-发布或复制到 ESP 时应优先使用带架构后缀的文件。
+Each build also copies the result to `.build/output/wolfssh.efi` for existing
+automation. Prefer the architecture-suffixed file when publishing or copying
+to an ESP.
 
-源码和工具的提交、下载地址及 SHA-256 全部记录在 `deps.lock`。默认目录布局是：
+Source and tool revisions, download locations, and SHA-256 checksums are all
+recorded in `deps.lock`. The default layout is:
 
 ```text
 parent/
@@ -75,11 +104,12 @@ parent/
 └── toolchains/
 ```
 
-构建脚本会对最终副本执行 EDK II `GenFw -z`，清除 PE 调试目录中的绝对构建路径和
-时间字段。AARCH64 使用锁定的交叉编译器；X64 使用主机 GCC/binutils/NASM，因此跨
-主机复现 X64 二进制时还应保持这些工具的版本一致。
+The build script runs EDK II `GenFw -z` on the final copy to remove absolute
+build paths and timestamp fields from the PE debug directory. AARCH64 uses the
+pinned cross compiler; X64 uses the host GCC/binutils/NASM, so reproducing an
+X64 binary across hosts also requires matching their versions.
 
-如已安装自己的 EDK II 或工具链，可设置：
+If you already have EDK II or a toolchain installed, set:
 
 ```bash
 EDK2_ROOT=/path/to/edk2 \
@@ -90,112 +120,137 @@ EDK2_ROOT=/path/to/edk2 \
 ARCH=X64 BUILD_TARGET=RELEASE ./scripts/build.sh
 ```
 
-主机构建至少需要 Bash、Git、Python 3、GNU Make、主机 C 编译器、`curl`、`tar`、
-`sha256sum` 和 EDK II BaseTools 所需的 UUID 开发库。X64 构建还要求主机提供 GCC、
-GNU binutils 和 NASM；X64 QEMU 测试要求 `qemu-system-x86_64` 与 OVMF。锁定的
-AARCH64 预编译工具是 Linux x86-64 版本；其他主机请手动准备同等工具并使用上述
-环境变量。
+The host build requires at least Bash, Git, Python 3, GNU Make, a host C
+compiler, `curl`, `tar`, `sha256sum`, and the UUID development library needed
+by EDK II BaseTools. X64 additionally requires host GCC, GNU binutils, and
+NASM; X64 QEMU testing requires `qemu-system-x86_64` and OVMF. The pinned
+AARCH64 prebuilt toolchain targets Linux x86-64; on other hosts, prepare an
+equivalent toolchain manually and use the environment variables above.
 
-## 在 UEFI Shell 中使用
+## Use in UEFI Shell
 
-选择与固件架构匹配的文件复制到 ESP 或 U 盘。常见 PC 固件通常使用 X64，ARM64
-设备使用 AARCH64；UEFI 不会运行架构不匹配的 EFI 文件。可以保留发布文件名，也可
-将它重命名为 `wolfssh.efi`，然后在 UEFI Shell 中运行：
+Copy the EFI file matching the firmware architecture to an ESP or USB drive.
+Typical PCs use X64 and ARM64 devices use AARCH64; UEFI cannot execute an EFI
+file built for the other architecture. Keep the release name or rename it to
+`wolfssh.efi`, then run it from UEFI Shell:
 
 ```text
 fs0:\wolfssh.efi user@192.0.2.10
 ```
 
-非默认端口：
+For a non-default port:
 
 ```text
 fs0:\wolfssh.efi -p 2222 user@192.0.2.10
 ```
 
-首次连接会显示主机密钥摘要并要求确认。正式使用建议从服务器可信侧计算摘要：
+The first connection displays the host-key fingerprint and asks for
+confirmation. For regular use, calculate the fingerprint from a trusted server
+side:
 
 ```bash
 awk '{print $2}' /etc/ssh/ssh_host_ecdsa_key.pub | base64 -d | sha256sum
 ```
 
-然后固定它：
+Then pin it:
 
 ```text
-fs0:\wolfssh.efi -f 64位十六进制SHA256 user@192.0.2.10
+fs0:\wolfssh.efi -f 64-hex-character-SHA256 user@192.0.2.10
 ```
 
-没有 `-P` 时密码输入不回显。`-P password` 只适合自动化测试，因为密码会出现在
-UEFI Shell 参数和可能的命令历史中。`-y` 也只应在测试环境使用，它仅对当前连接
-接受未固定的主机密钥。
+Without `-P`, password entry is not echoed. `-P password` is only suitable for
+automated tests because the password appears in UEFI Shell arguments and may
+appear in command history. `-y` is likewise for testing only: it accepts an
+unpinned host key only for the current connection.
 
-客户端使用固件的默认 IPv4 映射。真实机器必须先加载 NIC、SNP/MNP、IPv4 和 TCP4
-驱动，并让固件通过 DHCP 或静态配置得到地址；若 Shell 带 `ifconfig`，可先用它确认
-接口状态。应用不会自行实现网卡驱动或 DHCP 客户端，而是复用固件网络栈。
+The client uses the firmware's default IPv4 mapping. On physical hardware, the
+NIC, SNP/MNP, IPv4, and TCP4 drivers must already be loaded, and the firmware
+must obtain an address through DHCP or static configuration. If the shell
+includes `ifconfig`, use it to check the interface first. The application does
+not implement a NIC driver or DHCP client; it uses the firmware network stack.
 
-内置终端自检：
+Run the built-in terminal check with:
 
 ```text
 fs0:\wolfssh.efi --self-test
 ```
 
-## QEMU 端到端测试
+## QEMU end-to-end testing
 
 ```bash
 ARCH=AARCH64 ./scripts/test-qemu.sh
 ARCH=X64 ./scripts/test-qemu.sh
 ```
 
-测试脚本会：
+The test script:
 
-1. 构建所选架构的 RELEASE EFI 应用；
-2. 生成一次性 ECDSA P-256 主机密钥，并启动只允许目标算法和测试密码的 AsyncSSH 服务端；
-3. 通过一个无特权 QEMU stream 后端提供 DHCP、ARP 和单连接 TCP 转发；
-4. 启动对应架构的 QEMU/EDK II/UEFI Shell；
-5. 验证 `-f` 精确固定当次临时主机密钥、密码认证、PTY 尺寸、shell channel、颜色、擦除、光标定位和双向 DSR 回应；
-6. 要求远端会话以状态 0 关闭。
+1. Builds the selected architecture's RELEASE EFI application.
+2. Generates a one-time ECDSA P-256 host key and starts an AsyncSSH server
+   restricted to the target algorithms and test password.
+3. Provides DHCP, ARP, and single-connection TCP forwarding through an
+   unprivileged QEMU stream backend.
+4. Starts QEMU with the matching EDK II firmware and UEFI Shell.
+5. Verifies exact `-f` pinning of the temporary host key, password
+   authentication, PTY size, shell channel, colors, erasing, cursor placement,
+   and bidirectional DSR replies.
+6. Requires the remote session to close with status 0.
 
-AARCH64 测试使用脚本下载并校验的 QEMU/固件；X64 测试使用主机安装的 QEMU 与
-OVMF。日志分别写入 `.build/test-results/aarch64/` 和 `.build/test-results/x64/`。
+The AARCH64 test uses the QEMU and firmware downloaded and verified by the
+script. The X64 test uses the host-installed QEMU and OVMF. Logs are written to
+`.build/test-results/aarch64/` and `.build/test-results/x64/`, respectively.
 
-该网络代理仅用于可重复测试，不是通用用户态网络栈。真实固件运行时使用
-`Tcp4.c` 中的 EDK II TCP4 路径。
+This network proxy exists solely for repeatable testing; it is not a general
+user-space networking stack. On actual firmware, `Tcp4.c` uses EDK II's TCP4
+path.
 
-已验证的版本、二进制摘要和测试标记见 `QEMU_VALIDATION.md`。
+See `QEMU_VALIDATION.md` for validated versions, binary checksums, and test
+markers.
 
-## 终端兼容边界
+## Terminal compatibility boundaries
 
-清屏是可行的：远端的 `ESC[2J` 会被解析为 UEFI
-`EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL.ClearScreen()`，其他常见 ANSI/VT 序列会映射为
-UEFI 光标、颜色和屏幕缓冲操作。
+Screen clearing works: remote `ESC[2J` is parsed into UEFI
+`EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL.ClearScreen()`, while other common ANSI/VT
+sequences are mapped to UEFI cursor, color, and screen-buffer operations.
 
-当前不是完整 xterm：
+This is not a complete xterm implementation:
 
-- 不支持鼠标、剪贴板、六像素图形或 bracketed paste；
-- 不在会话中动态上报控制台尺寸变化；
-- 24 位和 256 色会近似到 UEFI 16 色；
-- 非 BMP Unicode 会显示为 `?`，CJK/组合字符宽度按单格处理；
-- OSC 标题等序列会安全忽略；
-- 只支持 IPv4 字面量，没有 DNS 和 IPv6；
-- 没有持久 `known_hosts`，重启后需再次确认或使用 `-f`；
-- AARCH64 与 X64 EFI 文件均未签名，启用 Secure Boot 的机器可能拒绝加载。
+- Mouse, clipboard, sixel graphics, and bracketed paste are unsupported.
+- The console size is not reported dynamically during a session.
+- 24-bit and 256-color values are approximated to UEFI's 16 colors.
+- Non-BMP Unicode displays as `?`; CJK and combining characters occupy one cell.
+- OSC title and similar sequences are safely ignored.
+- Only IPv4 literals are supported; there is no DNS or IPv6.
+- There is no persistent `known_hosts`; after a reboot, confirm again or use `-f`.
+- Neither AARCH64 nor X64 EFI file is signed; Secure Boot may refuse to load it.
 
-因此，普通 shell、`top`/`htop`、`vim`/`nano`、菜单式 TUI 等基本交互具备实现基础，
-但高度依赖完整 xterm、鼠标或精确 Unicode 宽度的程序仍可能显示不完整。本项目尚未
-经过安全审计，不应直接用于不可恢复的生产维护操作。
+Ordinary shells, `top`/`htop`, `vim`/`nano`, and menu-driven TUIs therefore have
+a usable interaction foundation. Programs which depend heavily on a complete
+xterm, mouse support, or precise Unicode width may still render incompletely.
+The project has not undergone a security audit and should not be used directly
+for irreversible production maintenance.
 
-## 目录
+## Layout
 
 ```text
-WolfSshPkg/Application/WolfSsh/  CLI、认证、TCP4、会话循环、终端模拟器
-WolfSshPkg/Library/              UEFI libc 兼容层、wolfCrypt/wolfSSH EDK II 库
-WolfSshPkg/Include/              wolfSSL 用户配置与库接口
-patches/                         wolfSSH 在 NO_FILESYSTEM 下启用 UEFI PTY 的补丁
-scripts/                         依赖、工具、构建和 QEMU 回归脚本
-tests/                           确定性 SSH 服务端和 QEMU 测试网络代理
+WolfSshPkg/Application/WolfSsh/  CLI, authentication, TCP4, session loop, terminal emulator
+WolfSshPkg/Library/              UEFI libc compatibility layer, wolfCrypt/wolfSSH EDK II libraries
+WolfSshPkg/Include/              wolfSSL user configuration and library interfaces
+patches/                         wolfSSH patch enabling UEFI PTY without a filesystem
+scripts/                         dependency, tool, build, and QEMU regression scripts
+tests/                           deterministic SSH server and QEMU test network proxy
 ```
 
-## 许可证
+## Acknowledgments
 
-默认构建链接 GPLv3 版 wolfSSH/wolfSSL，因此本发布包按 GPLv3 提供。wolfSSH 和
-wolfSSL 也提供商业许可；如需走商业许可路线，应单独向 wolfSSL Inc. 确认许可条件。
-详见 `LICENSE` 和 `THIRD_PARTY_NOTICES.md`。
+- [ChatGPT (Codex)](https://openai.com/chatgpt/overview/): designed, implemented, built, and validated the project end-to-end.
+- [wolfSSH](https://github.com/wolfSSL/wolfssh) and [wolfSSL / wolfCrypt](https://github.com/wolfSSL/wolfssl): provide the SSH client and cryptographic implementation.
+- [tianocore/edk2](https://github.com/tianocore/edk2): provides the UEFI build infrastructure, libraries, and networking protocol interfaces.
+- [BigfootACA/iperf3-uefi](https://github.com/BigfootACA/iperf3-uefi): provided design reference for the TCP4 lifecycle and default IPv4 mapping.
+- [QEMU](https://www.qemu.org/), [OVMF](https://github.com/tianocore/edk2/tree/master/OvmfPkg), and [AsyncSSH](https://github.com/ronf/asyncssh): support end-to-end validation.
+
+## License
+
+The default build links the GPLv3 editions of wolfSSH/wolfSSL, so this release
+is provided under GPLv3. wolfSSH and wolfSSL also offer commercial licenses;
+for a commercial-license route, confirm the terms separately with wolfSSL Inc.
+See `LICENSE` and `THIRD_PARTY_NOTICES.md`.
