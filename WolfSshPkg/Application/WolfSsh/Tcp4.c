@@ -3,7 +3,6 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/NetLib.h>
-#include <Library/TimerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 
 #include <wolfssh/error.h>
@@ -11,15 +10,7 @@
 #define WOLFSSH_TCP_CONNECT_TIMEOUT_US  30000000ULL
 #define WOLFSSH_TCP_IO_TIMEOUT_US       30000000ULL
 #define WOLFSSH_TCP_CANCEL_TIMEOUT_US    1000000ULL
-
-STATIC
-UINT64
-NowMicroseconds (
-  VOID
-  )
-{
-  return DivU64x32 (GetTimeInNanoSecond (GetPerformanceCounter ()), 1000);
-}
+#define WOLFSSH_TCP_POLL_DELAY_US              50ULL
 
 STATIC
 VOID
@@ -44,18 +35,22 @@ WaitForCompletion (
   IN UINT64             TimeoutMicroseconds
   )
 {
-  UINT64 Deadline;
+  UINT64 Remaining;
+  UINT64 Delay;
 
-  Deadline = NowMicroseconds () + TimeoutMicroseconds;
+  Remaining = TimeoutMicroseconds;
   while (!*Done) {
     Protocol->Poll (Protocol);
     if (*Done) {
       break;
     }
-    if (NowMicroseconds () >= Deadline) {
+    if (Remaining == 0) {
       return EFI_TIMEOUT;
     }
-    gBS->Stall (50);
+    Delay = (Remaining < WOLFSSH_TCP_POLL_DELAY_US) ?
+            Remaining : WOLFSSH_TCP_POLL_DELAY_US;
+    gBS->Stall ((UINTN)Delay);
+    Remaining -= Delay;
   }
   return EFI_SUCCESS;
 }
@@ -68,13 +63,17 @@ CancelToken (
   IN volatile BOOLEAN            *Done
   )
 {
-  UINT64 Deadline;
+  UINT64 Remaining;
+  UINT64 Delay;
 
   Socket->Protocol->Cancel (Socket->Protocol, Token);
-  Deadline = NowMicroseconds () + WOLFSSH_TCP_CANCEL_TIMEOUT_US;
-  while (!*Done && (NowMicroseconds () < Deadline)) {
+  Remaining = WOLFSSH_TCP_CANCEL_TIMEOUT_US;
+  while (!*Done && (Remaining > 0)) {
     Socket->Protocol->Poll (Socket->Protocol);
-    gBS->Stall (50);
+    Delay = (Remaining < WOLFSSH_TCP_POLL_DELAY_US) ?
+            Remaining : WOLFSSH_TCP_POLL_DELAY_US;
+    gBS->Stall ((UINTN)Delay);
+    Remaining -= Delay;
   }
 }
 

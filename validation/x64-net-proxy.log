@@ -4,5 +4,5 @@ DHCP_OFFER address=10.0.2.15 gateway=10.0.2.2
 DHCP_ACK address=10.0.2.15 gateway=10.0.2.2
 ARP_REPLY gateway=10.0.2.2
 TCP_PROXY_CONNECTED target=127.0.0.1:2222
-TCP_SYN guest_port=1657
+TCP_SYN guest_port=1886
 QEMU_NET_DISCONNECTED

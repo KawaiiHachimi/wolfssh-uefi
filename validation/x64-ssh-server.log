@@ -1,0 +1,9 @@
+SSH_TEST_SERVER_READY port=2222
+AUTH_BEGIN user=test
+AUTH_PASSWORD accepted=True
+SESSION_REQUEST accepted=True
+PTY_REQUEST term=xterm-256color columns=80 rows=50 pixels=0x0 accepted=True
+SHELL_REQUEST accepted=True
+TERMINAL_PROBE_SENT
+TERMINAL_INPUT data='\x1b[12;1R'
+TERMINAL_DSR_OK row=12 column=1

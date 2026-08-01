@@ -17,4 +17,6 @@ QEMU_AARCH64_URL=https://github.com/xpack-dev-tools/qemu-arm-xpack/releases/down
 QEMU_AARCH64_SHA256=203dc2c71e25fcf97b95181328e9b888cc8092ff404bffd4d267b9defabcb698
 SHELLAA64_URL=https://github.com/pbatard/UEFI-Shell/releases/download/26H1/shellaa64.efi
 SHELLAA64_SHA256=1569b6db4e391c3c59194aa3319a3945efb800fb25349eb9d36ff3d258517ea6
+SHELLX64_URL=https://github.com/pbatard/UEFI-Shell/releases/download/26H1/shellx64.efi
+SHELLX64_SHA256=4ea080ddd576117cd04f5c02d16712ea5d9249c0752214d8e4055e460d7b11e0
 ASYNCSSH_VERSION=2.21.1

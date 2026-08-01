@@ -26,7 +26,6 @@
   MemoryAllocationLib
   NetLib
   PrintLib
-  TimerLib
   UefiApplicationEntryPoint
   UefiBootServicesTableLib
   UefiLib

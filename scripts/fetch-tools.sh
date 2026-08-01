@@ -5,6 +5,15 @@ project_root="$(cd "$(dirname "$0")/.." && pwd)"
 tool_root="${TOOL_ROOT:-$project_root/../toolchains}"
 download_root="$tool_root/downloads"
 installed_root="$tool_root/installed"
+arch="${ARCH:-AARCH64}"
+
+case "$arch" in
+  AARCH64|X64|ALL) ;;
+  *)
+    echo "Unsupported ARCH=$arch; expected AARCH64, X64 or ALL" >&2
+    exit 2
+    ;;
+esac
 
 # shellcheck disable=SC1091
 source "$project_root/deps.lock"
@@ -39,22 +48,29 @@ download_checked() {
 
 mkdir -p "$download_root" "$installed_root"
 
-gcc_archive="$download_root/$(basename "$AARCH64_TOOLCHAIN_URL")"
-qemu_archive="$download_root/$(basename "$QEMU_AARCH64_URL")"
-shell_binary="$download_root/shellaa64-26H1.efi"
-download_checked "$AARCH64_TOOLCHAIN_URL" "$AARCH64_TOOLCHAIN_SHA256" \
-  "$gcc_archive"
-download_checked "$QEMU_AARCH64_URL" "$QEMU_AARCH64_SHA256" \
-  "$qemu_archive"
-download_checked "$SHELLAA64_URL" "$SHELLAA64_SHA256" "$shell_binary"
+if [[ "$arch" == "AARCH64" || "$arch" == "ALL" ]]; then
+  gcc_archive="$download_root/$(basename "$AARCH64_TOOLCHAIN_URL")"
+  qemu_archive="$download_root/$(basename "$QEMU_AARCH64_URL")"
+  shell_aa64="$download_root/shellaa64-26H1.efi"
+  download_checked "$AARCH64_TOOLCHAIN_URL" "$AARCH64_TOOLCHAIN_SHA256" \
+    "$gcc_archive"
+  download_checked "$QEMU_AARCH64_URL" "$QEMU_AARCH64_SHA256" \
+    "$qemu_archive"
+  download_checked "$SHELLAA64_URL" "$SHELLAA64_SHA256" "$shell_aa64"
 
-gcc_directory="$installed_root/xpack-aarch64-none-elf-gcc-15.2.1-1.1"
-qemu_directory="$installed_root/xpack-qemu-arm-9.2.4-1"
-if [[ ! -x "$gcc_directory/bin/aarch64-none-elf-gcc" ]]; then
-  tar -xzf "$gcc_archive" -C "$installed_root"
+  gcc_directory="$installed_root/xpack-aarch64-none-elf-gcc-15.2.1-1.1"
+  qemu_directory="$installed_root/xpack-qemu-arm-9.2.4-1"
+  if [[ ! -x "$gcc_directory/bin/aarch64-none-elf-gcc" ]]; then
+    tar -xzf "$gcc_archive" -C "$installed_root"
+  fi
+  if [[ ! -x "$qemu_directory/bin/qemu-system-aarch64" ]]; then
+    tar -xzf "$qemu_archive" -C "$installed_root"
+  fi
 fi
-if [[ ! -x "$qemu_directory/bin/qemu-system-aarch64" ]]; then
-  tar -xzf "$qemu_archive" -C "$installed_root"
+
+if [[ "$arch" == "X64" || "$arch" == "ALL" ]]; then
+  shell_x64="$download_root/shellx64-26H1.efi"
+  download_checked "$SHELLX64_URL" "$SHELLX64_SHA256" "$shell_x64"
 fi
 
 python_root="$tool_root/python"
@@ -65,4 +81,7 @@ if ! PYTHONPATH="$python_root" python3 -c \
     "asyncssh==$ASYNCSSH_VERSION"
 fi
 
-echo "Pinned compiler, QEMU, UEFI Shell and QEMU test dependencies are ready"
+if [[ "$arch" == "X64" || "$arch" == "ALL" ]]; then
+  echo "X64 builds use host gcc/binutils/nasm; X64 QEMU tests use system qemu-system-x86_64 and OVMF"
+fi
+echo "Pinned tools for ARCH=$arch are ready"

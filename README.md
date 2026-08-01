@@ -1,10 +1,10 @@
 # wolfSSH UEFI Shell Client
 
-这是一个可运行的 AARCH64 UEFI Shell SSH 客户端原型。它把 wolfSSH 客户端、
-wolfCrypt 和 EDK II 的原生 TCP4 协议直接链接进 `wolfssh.efi`，不依赖 POSIX、
-BSD socket 或 UEFI 之外的运行时。
+这是一个可运行的 AARCH64（ARM64）与 X64（x86-64）UEFI Shell SSH 客户端原型。
+它把 wolfSSH 客户端、wolfCrypt 和 EDK II 的原生 TCP4 协议直接链接进 EFI 应用，
+不依赖 POSIX、BSD socket 或 UEFI 之外的运行时。
 
-当前版本已经在 QEMU 中完成真实的 SSH 握手和双向 PTY 测试。它不只是执行一条
+两个架构都已经在 QEMU 中完成真实的 SSH 握手和双向 PTY 测试。它不只是执行一条
 远端命令：连接建立后会进入交互式终端，可运行 shell、编辑器和常见文本 TUI。
 终端兼容范围与已知限制见下文。
 
@@ -22,6 +22,7 @@ ChatGPT (Codex), under the repository owner's direction.
 
 | 部分 | 实现 |
 |---|---|
+| 架构 | AARCH64 与 X64；分别发布 `wolfssh-aarch64.efi` 和 `wolfssh-x64.efi` |
 | 网络 | 直接使用 `EFI_TCP4_SERVICE_BINDING_PROTOCOL` / `EFI_TCP4_PROTOCOL`；枚举网卡、检测媒体、异步接收、带超时发送与关闭 |
 | 地址配置 | 与 `iperf3-uefi` 的 TCP4 路径一致：`UseDefaultAddress=TRUE`，等待 `EFI_NO_MAPPING` 消失，使用固件已有的 DHCP 或静态 IPv4 映射 |
 | SSH | wolfSSH 客户端、密码认证、PTY 和交互式 shell channel |
@@ -44,19 +45,26 @@ Ed25519、RSA 或 Curve25519 的定制服务器目前无法协商。
 
 ## 快速构建
 
-在 x86-64 Linux 上，以下命令会拉取锁定版本的源码、交叉编译器和 QEMU 测试工具：
+在 x86-64 Linux 上，先拉取锁定版本的源码。`ARCH=ALL` 会准备 AARCH64 工具、
+两个架构的 UEFI Shell 和测试所需的 Python 包：
 
 ```bash
 ./scripts/fetch-deps.sh
-./scripts/fetch-tools.sh
-BUILD_TARGET=RELEASE ./scripts/build.sh
+ARCH=ALL ./scripts/fetch-tools.sh
+
+ARCH=AARCH64 BUILD_TARGET=RELEASE ./scripts/build.sh
+ARCH=X64 BUILD_TARGET=RELEASE ./scripts/build.sh
 ```
 
-输出文件：
+只构建 X64 时可把工具准备命令改成 `ARCH=X64 ./scripts/fetch-tools.sh`。输出文件为：
 
 ```text
-.build/output/wolfssh.efi
+.build/output/wolfssh-aarch64.efi
+.build/output/wolfssh-x64.efi
 ```
+
+每次构建还会把刚生成的架构复制为 `.build/output/wolfssh.efi`，供已有自动化兼容使用；
+发布或复制到 ESP 时应优先使用带架构后缀的文件。
 
 源码和工具的提交、下载地址及 SHA-256 全部记录在 `deps.lock`。默认目录布局是：
 
@@ -68,23 +76,31 @@ parent/
 ```
 
 构建脚本会对最终副本执行 EDK II `GenFw -z`，清除 PE 调试目录中的绝对构建路径和
-时间字段；同一锁定源码在不同工作目录下可生成字节一致的发布 EFI 文件。
+时间字段。AARCH64 使用锁定的交叉编译器；X64 使用主机 GCC/binutils/NASM，因此跨
+主机复现 X64 二进制时还应保持这些工具的版本一致。
 
 如已安装自己的 EDK II 或工具链，可设置：
 
 ```bash
 EDK2_ROOT=/path/to/edk2 \
 AARCH64_TOOLCHAIN_ROOT=/path/to/xpack-aarch64-none-elf-gcc-15.2.1-1.1 \
-BUILD_TARGET=RELEASE ./scripts/build.sh
+ARCH=AARCH64 BUILD_TARGET=RELEASE ./scripts/build.sh
+
+EDK2_ROOT=/path/to/edk2 \
+ARCH=X64 BUILD_TARGET=RELEASE ./scripts/build.sh
 ```
 
 主机构建至少需要 Bash、Git、Python 3、GNU Make、主机 C 编译器、`curl`、`tar`、
-`sha256sum` 和 EDK II BaseTools 所需的 UUID 开发库。锁定的预编译工具是 Linux
-x86-64 版本；其他主机请手动准备同等工具并使用上述环境变量。
+`sha256sum` 和 EDK II BaseTools 所需的 UUID 开发库。X64 构建还要求主机提供 GCC、
+GNU binutils 和 NASM；X64 QEMU 测试要求 `qemu-system-x86_64` 与 OVMF。锁定的
+AARCH64 预编译工具是 Linux x86-64 版本；其他主机请手动准备同等工具并使用上述
+环境变量。
 
 ## 在 UEFI Shell 中使用
 
-把 AARCH64 `wolfssh.efi` 复制到 ESP 或 U 盘，在 UEFI Shell 中运行：
+选择与固件架构匹配的文件复制到 ESP 或 U 盘。常见 PC 固件通常使用 X64，ARM64
+设备使用 AARCH64；UEFI 不会运行架构不匹配的 EFI 文件。可以保留发布文件名，也可
+将它重命名为 `wolfssh.efi`，然后在 UEFI Shell 中运行：
 
 ```text
 fs0:\wolfssh.efi user@192.0.2.10
@@ -125,17 +141,21 @@ fs0:\wolfssh.efi --self-test
 ## QEMU 端到端测试
 
 ```bash
-./scripts/test-qemu.sh
+ARCH=AARCH64 ./scripts/test-qemu.sh
+ARCH=X64 ./scripts/test-qemu.sh
 ```
 
 测试脚本会：
 
-1. 构建 RELEASE AARCH64 EFI 应用；
+1. 构建所选架构的 RELEASE EFI 应用；
 2. 生成一次性 ECDSA P-256 主机密钥，并启动只允许目标算法和测试密码的 AsyncSSH 服务端；
 3. 通过一个无特权 QEMU stream 后端提供 DHCP、ARP 和单连接 TCP 转发；
-4. 启动 AARCH64 QEMU/EDK II/UEFI Shell；
+4. 启动对应架构的 QEMU/EDK II/UEFI Shell；
 5. 验证 `-f` 精确固定当次临时主机密钥、密码认证、PTY 尺寸、shell channel、颜色、擦除、光标定位和双向 DSR 回应；
 6. 要求远端会话以状态 0 关闭。
+
+AARCH64 测试使用脚本下载并校验的 QEMU/固件；X64 测试使用主机安装的 QEMU 与
+OVMF。日志分别写入 `.build/test-results/aarch64/` 和 `.build/test-results/x64/`。
 
 该网络代理仅用于可重复测试，不是通用用户态网络栈。真实固件运行时使用
 `Tcp4.c` 中的 EDK II TCP4 路径。
@@ -157,7 +177,7 @@ UEFI 光标、颜色和屏幕缓冲操作。
 - OSC 标题等序列会安全忽略；
 - 只支持 IPv4 字面量，没有 DNS 和 IPv6；
 - 没有持久 `known_hosts`，重启后需再次确认或使用 `-f`；
-- 当前只有 AARCH64 构建目标，EFI 文件未签名，启用 Secure Boot 的机器可能拒绝加载。
+- AARCH64 与 X64 EFI 文件均未签名，启用 Secure Boot 的机器可能拒绝加载。
 
 因此，普通 shell、`top`/`htop`、`vim`/`nano`、菜单式 TUI 等基本交互具备实现基础，
 但高度依赖完整 xterm、鼠标或精确 Unicode 宽度的程序仍可能显示不完整。本项目尚未

@@ -3,7 +3,7 @@
   PLATFORM_GUID                  = 9C7B182E-942E-4AFE-91D8-3E1E55ED2BAC
   PLATFORM_VERSION               = 0.1
   DSC_SPECIFICATION              = 0x00010006
-  SUPPORTED_ARCHITECTURES        = AARCH64
+  SUPPORTED_ARCHITECTURES        = AARCH64|X64
   BUILD_TARGETS                  = DEBUG|RELEASE|NOOPT
   SKUID_IDENTIFIER               = DEFAULT
 
@@ -27,10 +27,8 @@
   WolfCryptLib|WolfSshPkg/Library/WolfCryptLib/WolfCryptLib.inf
   WolfSshLib|WolfSshPkg/Library/WolfSshLib/WolfSshLib.inf
 
-[LibraryClasses.AARCH64]
-  ArmGenericTimerCounterLib|ArmPkg/Library/ArmGenericTimerPhyCounterLib/ArmGenericTimerPhyCounterLib.inf
-  ArmLib|MdePkg/Library/ArmLib/ArmBaseLib.inf
-  TimerLib|ArmPkg/Library/ArmArchTimerLib/ArmArchTimerLib.inf
+[BuildOptions]
+  GCC:*_*_X64_CC_FLAGS = -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0
 
 [Components]
   WolfSshPkg/Application/WolfSsh/WolfSsh.inf

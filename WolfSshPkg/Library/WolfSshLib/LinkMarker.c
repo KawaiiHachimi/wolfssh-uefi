@@ -3,7 +3,6 @@
 #include <Library/WolfSshLib.h>
 
 VOID
-EFIAPI
 WolfSshLibLinkMarker (
   VOID
   )
